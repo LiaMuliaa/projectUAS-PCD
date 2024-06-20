@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Mushroom Classification</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Mushroom Classification</h1>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file">
+            <button type="submit">Classify</button>
+        </form>
+        {% if result %}
+        <div class="result-section">
+            <h2>Classification Result: {{ result }}</h2>
+            <h3>GLCM Features:</h3>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>0 Degrees</th>
+                    <th>45 Degrees</th>
+                    <th>90 Degrees</th>
+                    <th>135 Degrees</th>
+                </tr>
+                <tr>
+                    <td>Contrast</td>
+                    <td>{{ features[0] }}</td>
+                    <td>{{ features[1] }}</td>
+                    <td>{{ features[2] }}</td>
+                    <td>{{ features[3] }}</td>
+                </tr>
+                <tr>
+                    <td>Correlation</td>
+                    <td>{{ features[4] }}</td>
+                    <td>{{ features[5] }}</td>
+                    <td>{{ features[6] }}</td>
+                    <td>{{ features[7] }}</td>
+                </tr>
+                <tr>
+                    <td>Energy</td>
+                    <td>{{ features[8] }}</td>
+                    <td>{{ features[9] }}</td>
+                    <td>{{ features[10] }}</td>
+                    <td>{{ features[11] }}</td>
+                </tr>
+                <tr>
+                    <td>Homogeneity</td>
+                    <td>{{ features[12] }}</td>
+                    <td>{{ features[13] }}</td>
+                    <td>{{ features[14] }}</td>
+                    <td>{{ features[15] }}</td>
+                </tr>
+            </table>
+            <h3>KNN Predictions:</h3>
+            <table>
+                <tr>
+                    <th>Class</th>
+                    <th>Probability</th>
+                </tr>
+                {% for class, probability in knn_probabilities %}
+                <tr>
+                    <td>{{ class }}</td>
+                    <td>{{ probability }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            <h3>Model Accuracy: {{ accuracy * 100 }}%</h3>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
