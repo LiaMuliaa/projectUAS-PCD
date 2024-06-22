@@ -29,12 +29,38 @@ classes = {
     5: 'Volvopluteus gloiocephalus'
 }
 
+# Function to preprocess and augment images
+def preprocess_and_augment(image_path):
+    # Read image
+    image = cv2.imread(image_path)
+    # Resize image to a standard size
+    image = cv2.resize(image, (256, 256))
+
+    # Augmentation: random flip, rotation, and brightness adjustment
+    # Horizontal flip
+    if np.random.rand() < 0.5:
+        image = cv2.flip(image, 1)
+    # Rotation
+    angle = np.random.uniform(-30, 30)
+    M = cv2.getRotationMatrix2D((128, 128), angle, 1)
+    image = cv2.warpAffine(image, M, (256, 256))
+    # Brightness adjustment
+    value = np.random.uniform(0.8, 1.2)
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hsv[:, :, 2] = np.clip(hsv[:, :, 2] * value, 0, 255)
+    image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+    # Convert to grayscale
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Normalize image
+    gray_image = gray_image / 255.0
+    return gray_image
+
 # Function to compute GLCM features
-def compute_glcm_features(image_path):
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+def compute_glcm_features(image):
     distances = [1]  # Pixel distance
     angles = [0, np.pi/4, np.pi/2, 3*np.pi/4]  # Directions 0, 45, 90, 135 degrees
-    glcm = graycomatrix(image, distances=distances, angles=angles, levels=256, symmetric=True, normed=True)
+    glcm = graycomatrix((image * 255).astype(np.uint8), distances=distances, angles=angles, levels=256, symmetric=True, normed=True)
     contrast = graycoprops(glcm, 'contrast').flatten()
     correlation = graycoprops(glcm, 'correlation').flatten()
     energy = graycoprops(glcm, 'energy').flatten()
@@ -49,7 +75,8 @@ def load_images_and_labels(path, label):
     for filename in os.listdir(path):
         if filename.endswith('.jpg') or filename.endswith('.png'):
             filepath = os.path.join(path, filename)
-            image_features = compute_glcm_features(filepath)
+            preprocessed_image = preprocess_and_augment(filepath)
+            image_features = compute_glcm_features(preprocessed_image)
             features.append(image_features)
             labels.append(label)
     return features, labels
@@ -95,7 +122,8 @@ def index():
         if file:
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
             file.save(file_path)
-            features = compute_glcm_features(file_path)
+            preprocessed_image = preprocess_and_augment(file_path)
+            features = compute_glcm_features(preprocessed_image)
             prediction = classifier.predict([features])[0]
             probabilities = classifier.predict_proba([features])[0]
             knn_probabilities = [(classes[i], prob) for i, prob in enumerate(probabilities)]
