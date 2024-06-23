@@ -8,35 +8,45 @@ from sklearn.metrics import accuracy_score
 import joblib
 from flask import Flask, request, render_template, redirect, url_for
 
+
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'data/'
 
-# Folder paths
-amanita_path = 'data/Amanita calyptroderma'
-coprinellus_path = 'data/Coprinellus micaceus'
-coprimopsis_path = 'data/Coprinopsis lagopus'
-ganoderma_path = 'data/Ganoderma tsugae'
-stereum_path = 'data/Stereum ostrea'
-volvopluteus_path ='data/Volvopluteus gloiocephalus'
 
-# Class labels
+# 2 Jenis
+amanita_path = 'data/Amanita_Caesarea-Edible'
+gyromitra_path ='data/Gyromitra_Esculenta-NotEdible'
+
+
+# 4 Jenis
+# amanita_path = 'data/Amanita_Caesarea-Edible'
+# boletus_path = 'data/Boletus_Regius-Edible'
+# gyromitra_path ='data/Gyromitra_Esculenta-NotEdible'
+# omphalotus_path ='data/Omphalotus_Olearius-NotEdible'
+
+
 classes = {
-    0: 'Amanita calyptroderma',
-    1: 'Coprinellus micaceus',
-    2: 'Coprinopsis lagopus',
-    3: 'Ganoderma tsugae',
-    4: 'Stereum ostrea',
-    5: 'Volvopluteus gloiocephalus'
+    # 2 Jenis
+    0: 'Amanita_Caesarea-Edible',
+    1: 'Gyromitra_Esculenta-NotEdible'
+
+
+    # 4 Jenis
+    # 0: 'Amanita_Caesarea-Edible',
+    # 1: 'Boletus_Regius-Edible',
+    # 2: 'Gyromitra_Esculenta-NotEdible',
+    # 3: 'Omphalotus_Olearius-NotEdible'
 }
 
-# Function to preprocess and augment images
+
 def preprocess_and_augment(image_path):
     # Read image
     image = cv2.imread(image_path)
-    # Resize image to a standard size
+    # Resize image 
     image = cv2.resize(image, (256, 256))
 
-    # Augmentation: random flip, rotation, and brightness adjustment
+
+    # Augmentation: 
     # Horizontal flip
     if np.random.rand() < 0.5:
         image = cv2.flip(image, 1)
@@ -50,16 +60,18 @@ def preprocess_and_augment(image_path):
     hsv[:, :, 2] = np.clip(hsv[:, :, 2] * value, 0, 255)
     image = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
+
     # Convert to grayscale
     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     # Normalize image
     gray_image = gray_image / 255.0
     return gray_image
 
-# Function to compute GLCM features
+
+# GLCM features
 def compute_glcm_features(image):
-    distances = [1]  # Pixel distance
-    angles = [0, np.pi/4, np.pi/2, 3*np.pi/4]  # Directions 0, 45, 90, 135 degrees
+    distances = [1] 
+    angles = [0, np.pi/4, np.pi/2, 3*np.pi/4]  
     glcm = graycomatrix((image * 255).astype(np.uint8), distances=distances, angles=angles, levels=256, symmetric=True, normed=True)
     contrast = graycoprops(glcm, 'contrast').flatten()
     correlation = graycoprops(glcm, 'correlation').flatten()
@@ -68,7 +80,7 @@ def compute_glcm_features(image):
     features = np.hstack([contrast, correlation, energy, homogeneity])
     return features
 
-# Load images and compute features
+
 def load_images_and_labels(path, label):
     features = []
     labels = []
@@ -81,35 +93,49 @@ def load_images_and_labels(path, label):
             labels.append(label)
     return features, labels
 
+
 # Load data
+# 2 Jenis
 amanita_features, amanita_labels = load_images_and_labels(amanita_path, 0)
-coprinellus_features, coprinellus_labels = load_images_and_labels(coprinellus_path, 1)
-coprimopsis_features, coprimopsis_labels = load_images_and_labels(coprimopsis_path, 2)
-ganoderma_features, ganoderma_labels = load_images_and_labels(ganoderma_path, 3)
-stereum_features, stereum_labels = load_images_and_labels(stereum_path, 4)
-volvopluteus_features, volvopluteus_labels = load_images_and_labels(volvopluteus_path, 5)
+gyromitra_features, gyromitra_labels = load_images_and_labels(gyromitra_path, 1)
+
+
+# 4 Jenis
+# amanita_features, amanita_labels = load_images_and_labels(amanita_path, 0)
+# boletus_features, boletus_labels = load_images_and_labels(boletus_path, 1)
+# gyromitra_features, gyromitra_labels = load_images_and_labels(gyromitra_path, 2)
+# omphalotus_features, omphalotus_labels = load_images_and_labels(omphalotus_path, 3)
+
 
 # Combine data
-X = amanita_features + coprinellus_features + coprimopsis_features + ganoderma_features + stereum_features + volvopluteus_features
-y = amanita_labels + coprinellus_labels + coprimopsis_labels + ganoderma_labels + stereum_labels + volvopluteus_labels
+# 2 Jenis
+X = amanita_features + gyromitra_features
+y = amanita_labels + gyromitra_labels
 
-# Split data into training and testing sets
+
+# 4 Jenis
+# X = amanita_features + boletus_features + gyromitra_features + omphalotus_features
+# y = amanita_labels + boletus_labels + gyromitra_labels + omphalotus_labels
+
+
+# Split data
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-# Train KNN classifier
+
+# Train KNN 
 classifier = KNeighborsClassifier(n_neighbors=3)
 classifier.fit(X_train, y_train)
 
-# Test classifier
+
+# Test 
 y_pred = classifier.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
 print(f'Accuracy: {accuracy * 100:.2f}%')
 
-# Save the trained model
-joblib.dump(classifier, 'knn_model.pkl')
 
-# Load the trained model
+joblib.dump(classifier, 'knn_model.pkl')
 classifier = joblib.load('knn_model.pkl')
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -130,6 +156,7 @@ def index():
             result = classes[prediction]
             return render_template('index.html', result=result, features=features, knn_probabilities=knn_probabilities, accuracy=accuracy)
     return render_template('index.html', accuracy=accuracy)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
